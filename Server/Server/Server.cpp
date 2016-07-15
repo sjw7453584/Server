@@ -15,6 +15,14 @@ void on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf)
 	}
 }
 
+void on_write(uv_write_t* req, int status)
+{
+	if (NULL != req)
+	{
+		delete req;
+	}
+}
+
 void on_connection(uv_stream_t* server, int status)
 {
 	std::cout << "client come in";
@@ -27,6 +35,14 @@ void on_connection(uv_stream_t* server, int status)
 	uv_tcp_init(uv_default_loop(), client);
 	uv_accept(server, (uv_stream_t*)client);
 	uv_read_start((uv_stream_t*)client, on_alloc, on_read);
+
+	uv_write_t *req = new uv_write_t();
+	uv_buf_t buf;
+	char* base = new char[100];
+	strncpy(base, "server to client\n", sizeof("server to client\n"));
+	buf = uv_buf_init(base, 100);
+	uv_write(req, (uv_stream_t*)client, &buf, 1, on_write);
+
 }
 
 int main()
