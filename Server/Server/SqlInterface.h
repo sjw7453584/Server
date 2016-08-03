@@ -24,7 +24,7 @@ public:
 	~SqlInterface();
 	void AddAsyncTrans(uint32 index, SqlTrans* trans);
 	SqlTrans* PopFinishedTrans();
-	bool Init(std::vector<connection_info>& conn_infos);
+	bool Init(std::vector<connection_info>& conn_infos, uint32 shared_threads_num = 0);
 	void Run();
 	void JoinDbThreads();
 private:
