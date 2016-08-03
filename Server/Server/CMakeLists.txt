@@ -116,8 +116,7 @@ set(SRCS ${SRCS}  ${HEADS} ${HEADHPPS} ${SRCCCS} )
 #message(STATUS "COMMON_HEADS=${COMMON_HEADS}")
 #source_group_by_dir(COMMON_HEADS ${SHARED_INCLUDE_DIR})
 
-INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../thrid_party/libuv/include
-					)
+
 if(MSVC)
 #INCLUDE_DIRECTORIES(${SHARED_INCLUDE_DIR}/ThreadData)
 #include_directories(${SHARED_INCLUDE_DIR}/hiredis_win)
@@ -129,18 +128,19 @@ endif()
 #set(PUB_HEADS ${SHARED_INCLUDE_DIR}/INetInterface.h	)
 #source_group("PublicIncludes" FILES ${PUB_HEADS})
 #set(SHARED_LIBS_PATH ${SHARED_DIR}/lib/${PLATOS})
-#configure_file (
-#  "${PROJECT_SOURCE_DIR}/Config.h.in"
-#  "${PROJECT_SOURCE_DIR}/Config.h"
-#  )
+configure_file (
+  "${PROJECT_SOURCE_DIR}/Config.h.in"
+  "${PROJECT_SOURCE_DIR}/Config.h"
+  )
 if(MSVC)
+link_directories(${PROJECT_SOURCE_DIR}/../../libs/win)
 else()
+link_directories(${PROJECT_SOURCE_DIR}/../../libs/linux)
 
 #link_directories(/usr/lib/mysql)
 #link_directories(/usr/lib64/mysql)
 #link_directories(/usr/local/lib/mysql)
 endif()
-link_directories(${PROJECT_SOURCE_DIR}/../../thrid_party/libuv/Debug/lib)
 if(NOT MSVC)
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ")
@@ -160,11 +160,20 @@ INSTALL(TARGETS ${PROJECT_NAME}
 		ARCHIVE DESTINATION ${PROJECT_SOURCE_DIR}/lib
 		)
 
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/../../thrid_party/libuv/include
+   					${PROJECT_SOURCE_DIR}/../../thrid_party/protobuf-2.2
+					${PROJECT_SOURCE_DIR}/../../libNet
+					${PROJECT_SOURCE_DIR}/../../thrid_party/mysql
+					)
+
 if( NOT WIN32 )
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}  
-uv rt dl pthread)
+Net uv protobuf mysqlclient rt dl pthread)
 else()
 TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+libNet.lib
+libprotobuf.lib
+mysqlclient.lib
 libuv.lib   
 advapi32.lib
 iphlpapi.lib

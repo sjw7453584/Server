@@ -1,5 +1,4 @@
 ﻿#include "DataBase.h"
-#include "mysql.h"
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -7,6 +6,16 @@
 #include "Config.h"
 #include <fstream>
 #include "textReader.h"
+#ifdef WIN32
+//#include <direct.h>
+#include <io.h>
+#else
+#include <unistd.h>
+//#include <sys/stat.h>
+//#include <sys/types.h>
+#endif
+#include "QueryResult.h"
+
 std::string TrimEndStr(const std::string& src, const char* charsTrim)
 {
 	int start = 0;
@@ -120,21 +129,19 @@ DataBase::~DataBase()
 
 }
 
-
-
-bool DataBase::Init()
+bool DataBase::Init(connection_info & conn_info)
 {
 	init_mutex.lock();
-	auto mysql_handle = mysql_init(nullptr);
+	mysql_handle = mysql_init(nullptr);
 	init_mutex.unlock();
-	if (nullptr == mysql_real_connect(mysql_handle, "192.168.1.72", "root", "Sanguo1!", "zgame6", 3306, nullptr, 0))
+	if (nullptr == mysql_real_connect(mysql_handle, conn_info.ip.c_str(), conn_info.user_name.c_str(), conn_info.passwd.c_str(), "", conn_info.port, nullptr, 0))
 	{
 		std::cout << "failed to connect to mysql server\n";
 		std::cout << mysql_error(mysql_handle) << std::endl;
 	}
 
 	std::ostringstream oss;
-	oss << "create database if not exists `my_data_base` default character set `utf8`";
+	oss << "create database if not exists `"<<conn_info.database_name<<"` default character set `" <<conn_info.conn_codec<<"`";
 	if (0 != mysql_query(mysql_handle, oss.str().c_str()))
 	{
 		std::cout<<mysql_error(mysql_handle)<<std::endl;
@@ -142,7 +149,7 @@ bool DataBase::Init()
 	oss.clear();
 	oss.str("");
 
-	oss << "use `my_data_base`";
+	oss << "use `"<<conn_info.database_name<<"`";
 	if (0 != mysql_query(mysql_handle, oss.str().c_str()))
 	{
 		std::cout << mysql_error(mysql_handle) << std::endl;
@@ -150,23 +157,81 @@ bool DataBase::Init()
 	oss.clear();
 	oss.str("");
 
-	std::vector<std::string> sqlsList;
-	oss << PROJECT_SOURCE_DIR << "/zgame2.sql";
+	
+	
 	//oss << PROJECT_SOURCE_DIR << "/test.txt";
-	auto rret = mysql_set_character_set(mysql_handle, "gb18030");
+	auto rret = mysql_set_character_set(mysql_handle, conn_info.conn_codec.c_str());
 	if (0 != rret)
 	{
 		std::cout << mysql_error(mysql_handle) << std::endl;
 	}
-	auto  ret = ParseSqlFileDb(oss.str().c_str(), sqlsList);
-	for (auto sql : sqlsList)
+
+	std::vector<std::string> sqlsList;
+	std::string sql_file_name{};
+	if (!conn_info.mysql_file.empty())
 	{
-		std::string str = /*s2utfs*/(sql);
-		if (0 != mysql_real_query(mysql_handle, str.c_str(), str.length()))
+		sql_file_name += "./mysql/";
+		sql_file_name += conn_info.mysql_file;
+		int ret = access(sql_file_name.c_str(), 0);
+		if (ret != 0)
+		{
+			oss << PROJECT_SOURCE_DIR << "/mysql/" << conn_info.mysql_file;
+			sql_file_name = oss.str();
+		}
+	}
+
+	if (!sql_file_name.empty())
+	{
+		auto  ret = ParseSqlFileDb(oss.str().c_str(), sqlsList);
+		for (auto sql : sqlsList)
+		{
+			std::string str = /*s2utfs*/(sql);
+			if (0 != mysql_real_query(mysql_handle, str.c_str(), str.length()))
+			{
+				std::cout << mysql_error(mysql_handle) << std::endl;
+			}
+		}
+	}
+	
+	return true;
+}
+
+QueryResult DataBase::Query(std::string query_str, int32& erroNo)
+{
+	erroNo = 0;
+	QueryResult result;
+	if (0 != mysql_real_query(mysql_handle, query_str.c_str(), query_str.length()))
+	{
+		erroNo = mysql_errno(mysql_handle);
+		std::cout << mysql_error(mysql_handle) << std::endl;
+		return result;
+	}
+
+	auto res = mysql_store_result(mysql_handle);
+	if (nullptr == res)
+	{
+		erroNo = mysql_errno(mysql_handle);
+		if (0 != erroNo)
 		{
 			std::cout << mysql_error(mysql_handle) << std::endl;
 		}
+		return result;
+		//auto cnt = mysql_field_count(mysql_handle);
 	}
-	return true;
+	auto field_number = mysql_field_count(mysql_handle);
+	uint32 rowIndex = 0;
+	while (auto row = mysql_fetch_row(res))
+	{
+		for (auto i = 0; i < field_number; i++)
+		{
+			//std::cout << row[i];
+			Field f;
+			f = row[i];
+			result.AddField(rowIndex, f);
+		}
+		rowIndex++;
+	}
+
+	return result;
 }
 

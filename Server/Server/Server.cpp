@@ -2,9 +2,10 @@
 #include<iostream>
 #include "INetInterface.h"
 #include "ClientMgr.h"
-#include "DataBase.h"
+#include "SqlInterface.h"
 #include <locale>
 #include <codecvt>
+#include "SelectRole.h"
 void on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf)
 {
 	char* base = new char[10000];
@@ -94,8 +95,8 @@ int main()
 
 	return uv_run(uv_default_loop(), UV_RUN_DEFAULT);*/
 
-	DataBase base;
-	base.Init();
+	/*DataBase base;
+	base.Init();*/
 	/*std::locale loc("chs");
 	std::cout << loc.name() << std::endl;*/
 	//return 0;
@@ -112,4 +113,19 @@ int main()
 	//std::string utf_str = cvt_utf8.to_bytes(ws);
 	//std::string myansistr = cvt_ansi.to_bytes(ws);//Unicode×ª»»ÎªGBK
 	//std::cout << myansistr << std::endl;
+	std::vector<connection_info> conns;
+	connection_info conn;
+	conn.ip = "192.168.1.72";
+	conn.port = 3306;
+	conn.user_name = "root";
+	conn.passwd = "Sanguo1!";
+	conn.index = 1;
+	conn.database_name = "zgame3";
+	conn.conn_codec = "latin1";
+	conns.push_back(conn);
+	SqlInterface::GetSingleton().Init(conns);
+
+	getSelectRole(1, 1);
+	SqlInterface::GetSingleton().Run();
+	//SqlInterface::GetSingleton().JoinDbThreads();
 }
