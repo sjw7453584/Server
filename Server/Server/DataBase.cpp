@@ -200,14 +200,18 @@ QueryResult DataBase::Query(std::string query_str, int32& erroNo)
 {
 	erroNo = 0;
 	QueryResult result;
+	query_mutex.lock();
 	if (0 != mysql_real_query(mysql_handle, query_str.c_str(), query_str.length()))
 	{
 		erroNo = mysql_errno(mysql_handle);
 		std::cout << mysql_error(mysql_handle) << std::endl;
+		query_mutex.unlock();
 		return result;
 	}
 
 	auto res = mysql_store_result(mysql_handle);
+	query_mutex.unlock();
+
 	if (nullptr == res)
 	{
 		erroNo = mysql_errno(mysql_handle);
@@ -231,7 +235,7 @@ QueryResult DataBase::Query(std::string query_str, int32& erroNo)
 		}
 		rowIndex++;
 	}
-
+	mysql_free_result(res);
 	return result;
 }
 

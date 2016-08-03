@@ -31,7 +31,7 @@ private:
 	std::unordered_map<uint32, DataBase*> database_conns;
 	std::unordered_map<uint32,std::list<SqlTrans*>> to_do_trans;
 	std::list<SqlTrans*> finished_trans;
-	static void db_thread(SqlInterface* sql_interface);
+	static void db_thread(SqlInterface* sql_interface, uint32 conn_index);
 	std::unordered_map<std::thread::id, std::thread*> db_threads;
 	std::mutex to_do_mutex;
 	std::mutex finished_mutex;

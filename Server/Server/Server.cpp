@@ -122,10 +122,16 @@ int main()
 	conn.index = 1;
 	conn.database_name = "zgame3";
 	conn.conn_codec = "latin1";
+	conn.thread_num = 2;
+	conns.push_back(conn);
+	conn.index = 1;
+	conn.database_name = "zgame4";
 	conns.push_back(conn);
 	SqlInterface::GetSingleton().Init(conns);
-
-	getSelectRole(1, 1);
+	for (auto i = 0; i < 1000; i++)
+	{
+		getSelectRole(1, 1);
+	}
 	SqlInterface::GetSingleton().Run();
 	//SqlInterface::GetSingleton().JoinDbThreads();
 }

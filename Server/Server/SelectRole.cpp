@@ -43,5 +43,7 @@ void 	SelectRole::OnFinish()
 void getSelectRole(uint32 uId, uint32 roleId)
 {
 	SqlTrans* pTrans = new SelectRole(uId, roleId);
+	//SqlTrans* pTrans1 = new SelectRole(uId, roleId);
 	SqlInterface::GetSingleton().AddAsyncTrans(1, pTrans);
+	//SqlInterface::GetSingleton().AddAsyncTrans(2, pTrans1);
 }

@@ -13,6 +13,7 @@ struct connection_info
 	std::string database_name;
 	std::string conn_codec;
 	std::string mysql_file;
+	uint32 thread_num;
 };
 
 class QueryResult;
@@ -27,6 +28,7 @@ public:
 
 private:
 	std::mutex init_mutex;
+	std::mutex query_mutex;
 	MYSQL* mysql_handle;
 };
 #endif

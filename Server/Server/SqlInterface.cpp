@@ -1,4 +1,5 @@
 #include "SqlInterface.h"
+#include <iostream>
 IMPLEMENT_SINGLETON(SqlInterface)
 
 SqlInterface::SqlInterface()
@@ -50,40 +51,42 @@ bool SqlInterface::Init(std::vector<connection_info>& conn_infos)
 			delete ptr->second;
 		}
 		database_conns[conn.index] = data_base;
-	}
+		for (auto i = 0; i < conn.thread_num; i++)
+		{
+			auto db = new std::thread(db_thread, this, conn.index);
+			db_threads[db->get_id()] = db;
+		}
 
-	auto db = new std::thread(db_thread, this);
-	db_threads[db->get_id()] = db;
+	}
 	
 	return true;
 }
 
-void SqlInterface::db_thread(SqlInterface* sql_interface)
-{
+void SqlInterface::db_thread(SqlInterface* sql_interface, uint32 conn_index)
+{ 
 	for (;;)
 	{
-		for (auto& ptr : sql_interface->to_do_trans)
-		{
-			if (!ptr.second.empty())
-			{
-				SqlTrans* trans = nullptr;
-				sql_interface->to_do_mutex.lock();
-				if (!ptr.second.empty())
-				{
-					trans = ptr.second.front();
-					ptr.second.pop_front();
-				}
-				sql_interface->to_do_mutex.unlock();
-				if (nullptr != trans)
-				{
-					trans->OnExecute(sql_interface->database_conns[ptr.first]);
-				}
-				sql_interface->finished_mutex.lock();
-				sql_interface->finished_trans.push_back(trans);
-				sql_interface->finished_mutex.unlock();
-				break;
-			}
+		auto& transes = sql_interface->to_do_trans[conn_index];
+		SqlTrans* trans = nullptr;
 
+		sql_interface->to_do_mutex.lock();
+		if (!transes.empty())
+		{
+			trans = transes.front();
+			transes.pop_front();
+		}
+		else
+		{
+			Sleep(10);
+		}
+		sql_interface->to_do_mutex.unlock();
+		if (nullptr != trans)
+		{
+			trans->OnExecute(sql_interface->database_conns[conn_index]);
+			std::cout << std::this_thread::get_id();
+			sql_interface->finished_mutex.lock();
+			sql_interface->finished_trans.push_back(trans);
+			sql_interface->finished_mutex.unlock();
 		}
 	}
 }
@@ -97,6 +100,10 @@ void SqlInterface::Run()
 		{
 			sqlTrans->OnFinish();
 			delete sqlTrans;
+		}
+		else
+		{
+			Sleep(1);
 		}
 	}
 }
